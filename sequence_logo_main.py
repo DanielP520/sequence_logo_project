@@ -17,7 +17,7 @@ from sklearn.cluster import KMeans
 import math
 import logomaker
 import numpy as np
-
+import helper_functions
 
 def create_3d_graph(df1, df2):
     # Get XYZ positions from the DataFrame columns
@@ -307,49 +307,18 @@ def plot(args):
     list_of_paths = glob.glob(containig_folder + "/*.pdb")
     target_chain = args.target_chain
     binder_chain = args.binder_chain
-    back_bone_atoms = 'CA'
-    target_chain_cordinates = []
-    with open(list_of_paths[0], "r") as file:
+    target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
 
-        for line in file:
-            dict_of_atoms = {}
-            if "ATOM " not in line:
-                continue
-            parsed_line = pdb_parser.PDBLineParser(line)
-            parsed_line.parse_line()
-            if parsed_line.chain_identifier == target_chain and parsed_line.atom_name == back_bone_atoms:
-                dict_of_atoms['X'] = parsed_line.x_cord
-                dict_of_atoms['Y'] = parsed_line.y_cord
-                dict_of_atoms['Z'] = parsed_line.z_cord
-                dict_of_atoms['chain'] = parsed_line.chain_identifier
-                dict_of_atoms['residue_index'] = parsed_line.residue_sequence_number
-                dict_of_atoms['AA'] = parsed_line.residue_name
-                dict_of_atoms['atom_type'] = parsed_line.atom_name
-                dict_of_atoms['file'] = list_of_paths[0]
-                target_chain_cordinates.append(dict_of_atoms)
     data_frame_target = pd.DataFrame(target_chain_cordinates)
+
+    helper_functions.plot_3d_points(data_frame_target)
+    exit()
     binder_chain_cordinates = []
     for file in list_of_paths:
-        with open(file, "r") as file:
-            for line in file:
-                dict_of_atoms = {}
-                if "ATOM " not in line:
-                    continue
-                parsed_line = pdb_parser.PDBLineParser(line)
-                parsed_line.parse_line()
-
-                if parsed_line.chain_identifier == binder_chain and parsed_line.atom_name == back_bone_atoms:
-                    dict_of_atoms['X'] = parsed_line.x_cord
-                    dict_of_atoms['Y'] = parsed_line.y_cord
-                    dict_of_atoms['Z'] = parsed_line.z_cord
-                    dict_of_atoms['chain'] = parsed_line.chain_identifier
-                    dict_of_atoms['residue_index'] = parsed_line.residue_sequence_number
-                    dict_of_atoms['AA'] = parsed_line.residue_name
-                    dict_of_atoms['atom_type'] = parsed_line.atom_name
-                    dict_of_atoms['file'] = list_of_paths[0]
-                    binder_chain_cordinates.append(dict_of_atoms)
-
+        binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder_chain)
+    print(binder_chain)
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
+
     nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7)
     clustered_list = cluster_3d_positions(nearest_neighbors_df, 150)
 
@@ -400,4 +369,8 @@ if __name__ == "__main__":
     argparser_logo.add_argument("--target_chain", type = str, default="", help ="Chain to target, it only plots it once.")
     argparser_logo.add_argument("--binder_chain", type=str, default="", help="Chain references binder, must be the same in all models")
     args = argparser_logo.parse_args()
+    setattr(args, "input_directory_path", "models")
+    setattr(args, "output_directory_path", "logos")
+    setattr(args, "target_chain", "B")
+    setattr(args, "binder_chain", "A")
     plot(args)
