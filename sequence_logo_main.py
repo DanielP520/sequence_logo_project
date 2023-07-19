@@ -18,6 +18,10 @@ import math
 import logomaker
 import numpy as np
 import helper_functions
+import vispy.scene
+from vispy.scene.visuals import Markers
+import vispy.app
+
 
 def create_3d_graph(df1, df2):
     # Get XYZ positions from the DataFrame columns
@@ -311,7 +315,7 @@ def plot(args):
 
     data_frame_target = pd.DataFrame(target_chain_cordinates)
 
-    helper_functions.plot_3d_points(data_frame_target)
+    helper_functions.plot_3d_scatter_matplotlib(data_frame_target)
     exit()
     binder_chain_cordinates = []
     for file in list_of_paths:
@@ -369,6 +373,8 @@ if __name__ == "__main__":
     argparser_logo.add_argument("--target_chain", type = str, default="", help ="Chain to target, it only plots it once.")
     argparser_logo.add_argument("--binder_chain", type=str, default="", help="Chain references binder, must be the same in all models")
     args = argparser_logo.parse_args()
+
+
     setattr(args, "input_directory_path", "models")
     setattr(args, "output_directory_path", "logos")
     setattr(args, "target_chain", "B")

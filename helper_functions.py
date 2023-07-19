@@ -1,5 +1,7 @@
 import pdb_parser
 import pythreejs as p3js
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 def extract_info_pdb(pdb_file, chain_id) -> list:
     all_Ca = []
@@ -30,28 +32,27 @@ def extract_info_pdb(pdb_file, chain_id) -> list:
     return all_Ca
 
 
-def plot_3d_points(df):
-    # Extract the x, y, z coordinates from the DataFrame
-    points = df[['X', 'Y', 'Z']].values
 
-    # Create BufferGeometry
-    geometry = p3js.BufferGeometry(
-        attributes={
-            'position': p3js.BufferAttribute(array=points, normalized=False)
-        }
-    )
 
-    # Create Material
-    material = p3js.PointsMaterial(size=0.05, color='red')
 
-    # Create Points object
-    points_object = p3js.Points(geometry=geometry, material=material)
+def plot_3d_scatter_matplotlib(df):
+    # Create a new figure and a 3D axis
+    points_data = df[['X',"Y","Z"]].values.tolist()
 
-    # Create Scene
-    scene = p3js.Scene(children=[points_object])
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
 
-    # Create Renderer
-    renderer = p3js.Renderer(scene=scene, controls=[p3js.OrbitControls()])
+    # Extract x, y, and z coordinates from the points data
+    x = df.iloc[:, 0]
+    y = df.iloc[:, 1]
+    z = df.iloc[:, 2]
+    # Create the 3D scatter plot
+    ax.scatter(x, y, z, c='r', marker='o')
 
-    # Display the Renderer
-    renderer
+    # Set axis labels
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.ion()
+    # Show the plot
+    plt.show()
