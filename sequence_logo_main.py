@@ -5,11 +5,9 @@ Created on Tue Jul  4 17:18:58 2023
 @author: camlo
 """
 import os.path
-
+from plotly.offline import init_notebook_mode, iplot
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import argparse
-import pdb_parser
 import pandas as pd
 import glob
 from scipy.spatial import KDTree
@@ -18,9 +16,6 @@ import math
 import logomaker
 import numpy as np
 import helper_functions
-import vispy.scene
-from vispy.scene.visuals import Markers
-import vispy.app
 
 
 def create_3d_graph(df1, df2):
@@ -28,6 +23,9 @@ def create_3d_graph(df1, df2):
     x1, y1, z1 = df1['X'], df1['Y'], df1['Z']
     x2, y2, z2 = df2['X'], df2['Y'], df2['Z']
 
+    color_shapely = df2['shapely'].values.tolist()
+    color_polar = df2['polar'].values.tolist()
+    init_notebook_mode(connected=True)
     # Create traces for the scatter plots
     scatter_trace1 = go.Scatter3d(
         x=x1,
@@ -35,11 +33,11 @@ def create_3d_graph(df1, df2):
         z=z1,
         mode='markers',
         marker=dict(
-            size=5,
-            color='blue',
-            opacity=0.3
+            size=9,
+            color=color_shapely,
+            opacity=0
         ),
-        name='Dataframe 1'
+        uid='trace1'
     )
 
     scatter_trace2 = go.Scatter3d(
@@ -48,12 +46,20 @@ def create_3d_graph(df1, df2):
         z=z2,
         mode='markers',
         marker=dict(
-            size=5,
-            color='red',
-            opacity=0.3
+            size=6,
+            color='black',
+            opacity=0
         ),
-        name='Dataframe 2'
+        name='Target',
+        uid='trace2'
     )
+    buttons = []
+    buttons.append(dict(label='color shapely', method='restyle',  args=[{'marker.color': [color_shapely]}, [0]]))
+    buttons.append(dict(label='Polar', method='restyle', args=[{'marker.color': [color_polar]}, [0]]))
+    updatemenus = [
+        dict(buttons=buttons, showactive=True),
+        dict(direction='down', x=0.1, xanchor='left', y=1.1, yanchor='top'),
+    ]
 
     # Create the layout
     layout = go.Layout(
@@ -70,9 +76,9 @@ def create_3d_graph(df1, df2):
 
     # Create the figure and add the traces
     fig = go.Figure(data=[scatter_trace1, scatter_trace2], layout=layout)
-
+    fig.update_layout(updatemenus=updatemenus)
     # Show the interactive plot
-    fig.show(renderer='browser')
+    iplot(fig)
 
 
 def create_3d_graph_list(df, df_list, sequence_info):
@@ -168,7 +174,6 @@ def find_nearest_points(target, binders, radius):
     nearest_points_df = pd.DataFrame()
     for indices in nearest_points_indices:
         temp_df = binders.iloc[indices[0]]
-        temp_df['target_residues'] = indices[1]
         nearest_points_df = pd.concat([nearest_points_df, temp_df], ignore_index=True)
 
     return nearest_points_df
@@ -306,25 +311,21 @@ def plot_sequence_logo(df, filename=None):
         plt.show()
 
 
-def plot(args):
-    containig_folder =  args.input_directory_path
-    list_of_paths = glob.glob(containig_folder + "/*.pdb")
-    target_chain = args.target_chain
-    binder_chain = args.binder_chain
+def plot(files, target_chain, binder, is_ligand):
+    list_of_paths = glob.glob(files + "/*.pdb")
     target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
-
     data_frame_target = pd.DataFrame(target_chain_cordinates)
 
-    helper_functions.plot_3d_scatter_matplotlib(data_frame_target)
-    exit()
     binder_chain_cordinates = []
     for file in list_of_paths:
-        binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder_chain)
-    print(binder_chain)
+        binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder)
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
-
     nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7)
-    clustered_list = cluster_3d_positions(nearest_neighbors_df, 150)
+    create_3d_graph(nearest_neighbors_df,data_frame_target)
+
+
+    exit(1)
+
 
     cluster_sequences = []
     list_of_target_positions = []
@@ -346,37 +347,22 @@ def plot(args):
     create_3d_graph_list(data_frame_target, clustered_list, list_of_data_frames)
     another_logo = 1
     logos_made = 1
-    while another_logo:
-        selected_clusters = input("Enter the cluster index (comma-separated) you want to make a sequence logo for: ")
-        selected_clusters = [int(label.strip()) - 1 for label in selected_clusters.split(',')]
-        list_selected_clusters = []
-        list_of_targets = []
-        for i in selected_clusters:
-            list_of_targets.append(list(set(list(clustered_list[i]['target_residues'].values))))
-            list_selected_clusters.append(transform_to_1_letter_code(clustered_list[i]['AA'].values.tolist()))
-        model = logomaker.get_example_matrix('ww_information_matrix',
-                                             print_description=False)
-        list_of_AA = model.columns.to_list()
-        bits_selected_clusters = []
-        for i in list_selected_clusters:
-            bits_selected_clusters.append(calculate_bits(list_of_AA, i))
-        df = pd.DataFrame(columns=model.columns)
-        df = pd.concat([df, pd.DataFrame(bits_selected_clusters, columns=df.columns)], ignore_index=True)
-        create_sequence_logo(df, list_of_targets, logos_made)
-        another_logo = input("Would you like to make another logo? 0 for no, 1 for yes.")
-        logos_made +=1
-
-if __name__ == "__main__":
-    argparser_logo = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    argparser_logo.add_argument("--input_directory_path", type = str, default="", help ="Directory containing pdb files")
-    argparser_logo.add_argument("--output_directory_path", type=str, default="", help="Directory where to save sequence logos")
-    argparser_logo.add_argument("--target_chain", type = str, default="", help ="Chain to target, it only plots it once.")
-    argparser_logo.add_argument("--binder_chain", type=str, default="", help="Chain references binder, must be the same in all models")
-    args = argparser_logo.parse_args()
-
-
-    setattr(args, "input_directory_path", "models")
-    setattr(args, "output_directory_path", "logos")
-    setattr(args, "target_chain", "B")
-    setattr(args, "binder_chain", "A")
-    plot(args)
+    # while another_logo:
+    #     selected_clusters = input("Enter the cluster index (comma-separated) you want to make a sequence logo for: ")
+    #     selected_clusters = [int(label.strip()) - 1 for label in selected_clusters.split(',')]
+    #     list_selected_clusters = []
+    #     list_of_targets = []
+    #     for i in selected_clusters:
+    #         list_of_targets.append(list(set(list(clustered_list[i]['target_residues'].values))))
+    #         list_selected_clusters.append(transform_to_1_letter_code(clustered_list[i]['AA'].values.tolist()))
+    #     model = logomaker.get_example_matrix('ww_information_matrix',
+    #                                          print_description=False)
+    #     list_of_AA = model.columns.to_list()
+    #     bits_selected_clusters = []
+    #     for i in list_selected_clusters:
+    #         bits_selected_clusters.append(calculate_bits(list_of_AA, i))
+    #     df = pd.DataFrame(columns=model.columns)
+    #     df = pd.concat([df, pd.DataFrame(bits_selected_clusters, columns=df.columns)], ignore_index=True)
+    #     create_sequence_logo(df, list_of_targets, logos_made)
+    #     another_logo = input("Would you like to make another logo? 0 for no, 1 for yes.")
+    #     logos_made +=1
