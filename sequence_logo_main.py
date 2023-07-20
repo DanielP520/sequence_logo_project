@@ -37,6 +37,8 @@ def create_3d_graph(df1, df2):
             color=color_shapely,
             opacity=0
         ),
+        text=df1['AA'],  # Use 'Name' column as annotations
+        hoverinfo='text',
         uid='trace1'
     )
 
@@ -304,6 +306,7 @@ def plot_sequence_logo(df, filename=None):
     ax.set_yticklabels(['0', '1'])
     ax.set_xlabel('Position')
     ax.set_ylabel('Probability')
+    ax.set_title('')
 
     if filename:
         plt.savefig(filename, dpi=300, bbox_inches='tight')  # Save the figure as an image file
@@ -311,7 +314,7 @@ def plot_sequence_logo(df, filename=None):
         plt.show()
 
 
-def plot(files, target_chain, binder, is_ligand):
+def plot(files, target_chain, binder, is_ligand,to_show):
     list_of_paths = glob.glob(files + "/*.pdb")
     target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
     data_frame_target = pd.DataFrame(target_chain_cordinates)
@@ -319,24 +322,25 @@ def plot(files, target_chain, binder, is_ligand):
     binder_chain_cordinates = []
     for file in list_of_paths:
         binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder)
+
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
-    nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7)
+
+    if to_show == "all":
+        nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7)
+    else:
+        to_show_df =data_frame_target.loc[data_frame_target['residue_index'].isin(to_show)]
+        nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7)
     create_3d_graph(nearest_neighbors_df,data_frame_target)
-
-
-    exit(1)
-
-
-    cluster_sequences = []
-    list_of_target_positions = []
-
-    for cluster in clustered_list:
-        list_of_target_positions.append(list(set(list(cluster['target_residues'].values))))
-        cluster_sequences.append(transform_to_1_letter_code(cluster['AA'].values.tolist()))
-
+    return data_frame_target,data_frame_binders
+def sequence_logos(data_frame_target,data_frame_binder,sequence_logo_residues):
     model = logomaker.get_example_matrix('ww_information_matrix',
                                          print_description=False)
     list_of_AA = model.columns.to_list()
+    for residue in sequence_logo_residues:
+        current_df = data_frame_target.loc[data_frame_target['residue_index'] == residue ]
+        near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7)
+        AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
+        bits =  calculate_bits(list_of_AA, i)
     list_of_data_frames = []
     for i in cluster_sequences:
         bits = calculate_bits(list_of_AA, i)
@@ -344,25 +348,20 @@ def plot(files, target_chain, binder, is_ligand):
         df.loc[0] = bits
         list_of_data_frames.append(df)
 
-    create_3d_graph_list(data_frame_target, clustered_list, list_of_data_frames)
-    another_logo = 1
-    logos_made = 1
-    # while another_logo:
-    #     selected_clusters = input("Enter the cluster index (comma-separated) you want to make a sequence logo for: ")
-    #     selected_clusters = [int(label.strip()) - 1 for label in selected_clusters.split(',')]
-    #     list_selected_clusters = []
-    #     list_of_targets = []
-    #     for i in selected_clusters:
-    #         list_of_targets.append(list(set(list(clustered_list[i]['target_residues'].values))))
-    #         list_selected_clusters.append(transform_to_1_letter_code(clustered_list[i]['AA'].values.tolist()))
-    #     model = logomaker.get_example_matrix('ww_information_matrix',
-    #                                          print_description=False)
-    #     list_of_AA = model.columns.to_list()
-    #     bits_selected_clusters = []
-    #     for i in list_selected_clusters:
-    #         bits_selected_clusters.append(calculate_bits(list_of_AA, i))
-    #     df = pd.DataFrame(columns=model.columns)
-    #     df = pd.concat([df, pd.DataFrame(bits_selected_clusters, columns=df.columns)], ignore_index=True)
-    #     create_sequence_logo(df, list_of_targets, logos_made)
-    #     another_logo = input("Would you like to make another logo? 0 for no, 1 for yes.")
-    #     logos_made +=1
+
+    selected_clusters = input("Enter the cluster index (comma-separated) you want to make a sequence logo for: ")
+    selected_clusters = [int(label.strip()) - 1 for label in selected_clusters.split(',')]
+    list_selected_clusters = []
+    list_of_targets = []
+    for i in selected_clusters:
+        list_of_targets.append(list(set(list(clustered_list[i]['target_residues'].values))))
+        list_selected_clusters.append(transform_to_1_letter_code(clustered_list[i]['AA'].values.tolist()))
+    model = logomaker.get_example_matrix('ww_information_matrix',
+                                         print_description=False)
+    list_of_AA = model.columns.to_list()
+    bits_selected_clusters = []
+    for i in list_selected_clusters:
+        bits_selected_clusters.append(calculate_bits(list_of_AA, i))
+    df = pd.DataFrame(columns=model.columns)
+    df = pd.concat([df, pd.DataFrame(bits_selected_clusters, columns=df.columns)], ignore_index=True)
+    create_sequence_logo(df, list_of_targets, logos_made)
