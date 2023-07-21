@@ -5,6 +5,8 @@ Created on Tue Jul  4 17:18:58 2023
 @author: camlo
 """
 import os.path
+
+import plotly.subplots
 from plotly.offline import init_notebook_mode, iplot
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -16,7 +18,7 @@ import math
 import logomaker
 import numpy as np
 import helper_functions
-
+import warnings
 
 def create_3d_graph(df1, df2):
     # Get XYZ positions from the DataFrame columns
@@ -26,9 +28,9 @@ def create_3d_graph(df1, df2):
 
 
 
-    color_shapely = df2['shapely'].values.tolist()
-    color_polar = df2['polar'].values.tolist()
-
+    color_shapely = df1['shapely'].values.tolist()
+    color_polar = df1['polar'].values.tolist()
+    names = df2['residue_index'].values.tolist()
     init_notebook_mode(connected=True)
     # Create traces for the scatter plots
     scatter_trace1 = go.Scatter3d(
@@ -39,11 +41,12 @@ def create_3d_graph(df1, df2):
         marker=dict(
             size=9,
             color=color_shapely,
-            opacity=0
+            opacity=0,
+            line=dict(color='black', width=2)
         ),
         text=df1['AA'],  # Use 'Name' column as annotations
         hoverinfo='text',
-        uid='trace1'
+        hoverlabel = dict(bgcolor='yellow', bordercolor='black')
     )
 
     scatter_trace2 = go.Scatter3d(
@@ -52,12 +55,14 @@ def create_3d_graph(df1, df2):
         z=z2,
         mode='markers',
         marker=dict(
-            size=6,
+            size=15,
             color='black',
-            opacity=0
+            opacity=0,
+            line=dict(color='white', width=5)
         ),
-        name='Target',
-        uid='trace2'
+        text = names,
+        hoverinfo='text',
+        hoverlabel=dict(bgcolor='gray', bordercolor='white')
     )
     buttons = []
     buttons.append(dict(label='color shapely', method='restyle',  args=[{'marker.color': [color_shapely]}, [0]]))
@@ -185,6 +190,13 @@ def find_nearest_points(target, binders, radius):
     return nearest_points_df
 
 
+# Function to calculate arrow position dynamically
+def calculate_arrow_position(subplot_index):
+    arrow_x = (subplot_index - 1) * 0.25 + 0.1
+    arrow_tail_x = arrow_x + 0.1
+    return arrow_x, arrow_tail_x
+
+
 def cluster_3d_positions(df, num_clusters):
     # Extract the 3D positions from the DataFrame
     positions = df[['X', 'Y', 'Z']].values
@@ -263,7 +275,7 @@ def calculate_bits(list_of_AA, sequence_list):
     return heights
 
 
-def create_sequence_logo(df, target, logos_made):
+def create_sequence_logo(df, target):
     # Create a Logo object
 
     logo = logomaker.Logo(df,
@@ -272,8 +284,8 @@ def create_sequence_logo(df, target, logos_made):
     positions = [i for i in range(len(target))]
     logo.ax.set_xticklabels(target)
     logo.ax.set_xticks(positions)
-    plt.savefig(f'logo_{logos_made}.png')
-
+    logo.ax.set_title(f'Residues Indexes: {"-".join(map(str,positions))} ')
+    return logo
 
 def create_sequence_logo_list(df_list, target):
     # Create a Logo object
@@ -325,11 +337,9 @@ def plot(files, target_chain, binder, is_ligand,to_show):
     else:
         target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
     data_frame_target = pd.DataFrame(target_chain_cordinates)
-
     binder_chain_cordinates = []
     for file in list_of_paths:
         binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder)
-
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
 
     if to_show == "all":
@@ -340,27 +350,48 @@ def plot(files, target_chain, binder, is_ligand,to_show):
     create_3d_graph(nearest_neighbors_df,data_frame_target)
     return data_frame_target,data_frame_binders
 def sequence_logos(data_frame_target,data_frame_binder,sequence_logo_residues):
+
+    warnings.filterwarnings("ignore")
     model = logomaker.get_example_matrix('ww_information_matrix',
                                          print_description=False)
     list_of_AA = model.columns.to_list()
     rows_bits= []
     residues = []
-    print()
+    plots = []
     for i,residue in enumerate(sequence_logo_residues):
         current_df = data_frame_target.loc[data_frame_target['residue_index'] == residue ]
         near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7)
         if near_neighbor_current.empty:
             continue
         residues.append(residue)
-        print(near_neighbor_current)
         AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
         bits = calculate_bits(list_of_AA, AA_sq)
         rows_bits.append(bits)
-
         df = pd.DataFrame(columns=model.columns)
         df = pd.concat([df, pd.DataFrame([bits], columns=df.columns)], ignore_index=True)
-        create_sequence_logo(df, [residue], i)
-
+        plots.append(create_sequence_logo(df, [residue]))
+    fig = plotly.subplots.make_subplots(rows=1, cols=len(residues))
     df = pd.DataFrame(columns=model.columns)
     df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
-    create_sequence_logo(df, residues, "999")
+    plots.append(create_sequence_logo(df, residues))
+
+    for i,plot in enumerate(plots):
+        fig.add_trace(plot, row=1, col=i+1)
+
+    for i in range(2, len(residues)+1):
+        arrow_x, arrow_tail_x = calculate_arrow_position(i)
+        fig.add_annotation(
+            xref='paper', yref='paper',
+            x=arrow_x, y=-0.15,
+            ax=arrow_tail_x, ay=-0.15,
+            showarrow=True,
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=2,
+            arrowcolor='black',
+            standoff=5,
+            text=f'Subplot {i}',
+            font=dict(size=12, color='black'),
+            align='center'
+        )
+    fig.show()
