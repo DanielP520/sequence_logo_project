@@ -23,8 +23,12 @@ def create_3d_graph(df1, df2):
     x1, y1, z1 = df1['X'], df1['Y'], df1['Z']
     x2, y2, z2 = df2['X'], df2['Y'], df2['Z']
 
+
+
+
     color_shapely = df2['shapely'].values.tolist()
     color_polar = df2['polar'].values.tolist()
+
     init_notebook_mode(connected=True)
     # Create traces for the scatter plots
     scatter_trace1 = go.Scatter3d(
@@ -316,7 +320,10 @@ def plot_sequence_logo(df, filename=None):
 
 def plot(files, target_chain, binder, is_ligand,to_show):
     list_of_paths = glob.glob(files + "/*.pdb")
-    target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
+    if is_ligand:
+        target_chain_cordinates = helper_functions.extract_info_ligand(list_of_paths[0], target_chain)
+    else:
+        target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
     data_frame_target = pd.DataFrame(target_chain_cordinates)
 
     binder_chain_cordinates = []
@@ -336,32 +343,24 @@ def sequence_logos(data_frame_target,data_frame_binder,sequence_logo_residues):
     model = logomaker.get_example_matrix('ww_information_matrix',
                                          print_description=False)
     list_of_AA = model.columns.to_list()
-    for residue in sequence_logo_residues:
+    rows_bits= []
+    residues = []
+    print()
+    for i,residue in enumerate(sequence_logo_residues):
         current_df = data_frame_target.loc[data_frame_target['residue_index'] == residue ]
         near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7)
+        if near_neighbor_current.empty:
+            continue
+        residues.append(residue)
+        print(near_neighbor_current)
         AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
-        bits =  calculate_bits(list_of_AA, i)
-    list_of_data_frames = []
-    for i in cluster_sequences:
-        bits = calculate_bits(list_of_AA, i)
+        bits = calculate_bits(list_of_AA, AA_sq)
+        rows_bits.append(bits)
+
         df = pd.DataFrame(columns=model.columns)
-        df.loc[0] = bits
-        list_of_data_frames.append(df)
+        df = pd.concat([df, pd.DataFrame([bits], columns=df.columns)], ignore_index=True)
+        create_sequence_logo(df, [residue], i)
 
-
-    selected_clusters = input("Enter the cluster index (comma-separated) you want to make a sequence logo for: ")
-    selected_clusters = [int(label.strip()) - 1 for label in selected_clusters.split(',')]
-    list_selected_clusters = []
-    list_of_targets = []
-    for i in selected_clusters:
-        list_of_targets.append(list(set(list(clustered_list[i]['target_residues'].values))))
-        list_selected_clusters.append(transform_to_1_letter_code(clustered_list[i]['AA'].values.tolist()))
-    model = logomaker.get_example_matrix('ww_information_matrix',
-                                         print_description=False)
-    list_of_AA = model.columns.to_list()
-    bits_selected_clusters = []
-    for i in list_selected_clusters:
-        bits_selected_clusters.append(calculate_bits(list_of_AA, i))
     df = pd.DataFrame(columns=model.columns)
-    df = pd.concat([df, pd.DataFrame(bits_selected_clusters, columns=df.columns)], ignore_index=True)
-    create_sequence_logo(df, list_of_targets, logos_made)
+    df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
+    create_sequence_logo(df, residues, "999")
