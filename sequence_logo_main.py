@@ -74,8 +74,8 @@ def create_3d_graph(df1, df2,is_ligand):
         hoverlabel=dict(bgcolor='gray', bordercolor='white')
     )
     buttons = []
-    buttons.append(dict(label='color shapely', method='restyle',  args=[{'marker.color': [color_shapely]}, [0]]))
-    buttons.append(dict(label='Polar', method='restyle', args=[{'marker.color': [color_polar]}, [0]]))
+    buttons.append(dict(label='Shapely Colours', method='restyle',  args=[{'marker.color': [color_shapely]}, [0]]))
+    buttons.append(dict(label='Amino Colours', method='restyle', args=[{'marker.color': [color_polar]}, [0]]))
     updatemenus = [
         dict(buttons=buttons, showactive=True),
         dict(direction='down', x=0.1, xanchor='left', y=1.1, yanchor='top'),
