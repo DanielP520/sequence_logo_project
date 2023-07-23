@@ -19,8 +19,8 @@ import logomaker
 import numpy as np
 import helper_functions
 import warnings
-
-def create_3d_graph(df1, df2):
+from matplotlib.patches import FancyArrowPatch
+def create_3d_graph(df1, df2,is_ligand):
     # Get XYZ positions from the DataFrame columns
     x1, y1, z1 = df1['X'], df1['Y'], df1['Z']
     x2, y2, z2 = df2['X'], df2['Y'], df2['Z']
@@ -30,8 +30,17 @@ def create_3d_graph(df1, df2):
 
     color_shapely = df1['shapely'].values.tolist()
     color_polar = df1['polar'].values.tolist()
-    names = df2['residue_index'].values.tolist()
+    if is_ligand:
+        names = df2['atom_name'].values.tolist()
+        color_df2=  df2["color"].values.tolist()
+        size2 = 8
+
+    else:
+        names = df2['residue_index'].values.tolist()
+        color_df2 = "black"
+        size2 = 15
     init_notebook_mode(connected=True)
+
     # Create traces for the scatter plots
     scatter_trace1 = go.Scatter3d(
         x=x1,
@@ -55,8 +64,8 @@ def create_3d_graph(df1, df2):
         z=z2,
         mode='markers',
         marker=dict(
-            size=15,
-            color='black',
+            size=size2,
+            color=color_df2,
             opacity=0,
             line=dict(color='white', width=5)
         ),
@@ -162,13 +171,17 @@ def create_3d_graph_list(df, df_list, sequence_info):
     fig.show(renderer='browser')
 
 
-def find_nearest_points(target, binders, radius):
+def find_nearest_points(target, binders, radius, is_ligand
+                        ):
     # Convert XYZ positions of target DataFrame to a list of tuples
-    target_points = list(target[['X', 'Y', 'Z']].values)
-    positions = list(target['residue_index'].values)
+    target_points = target[['X', 'Y', 'Z']].values.tolist()
+    if is_ligand:
+        positions = list(target['atom_name'].values)
+    else:
+        positions = list(target['residue_index'].values)
 
     # Convert XYZ positions of binders DataFrame to a list of tuples
-    binder_points = list(binders[['X', 'Y', 'Z']].values)
+    binder_points = binders[['X', 'Y', 'Z']].values.tolist()
 
     # Create KDTree for binder_points
     tree = KDTree(binder_points)
@@ -280,30 +293,47 @@ def create_sequence_logo(df, target):
 
     logo = logomaker.Logo(df,
                           color_scheme='NajafabadiEtAl2017')
-    logo.ax.set_ylabel('bits')
+    logo.ax.set_ylabel('Frequency')
     positions = [i for i in range(len(target))]
     logo.ax.set_xticklabels(target)
     logo.ax.set_xticks(positions)
-    logo.ax.set_title(f'Residues Indexes: {"-".join(map(str,positions))} ')
+    logo.ax.set_title(f'Residues Indexes: {"-".join(map(str,target))} ')
     return logo
 
-def create_sequence_logo_list(df_list, target):
-    # Create a Logo object
-    for i, df in enumerate(df_list):
-        logo = logomaker.Logo(df,
-                              color_scheme='NajafabadiEtAl2017'
-                              )
-        logo.ax.set_ylabel('percentange')
+def create_sequence_logo_list(df_list):
+    # Calculate the number of columns based on the number of logos
+    num_logos = len(df_list)
+    num_cols = min(num_logos, 3)  # Change this value to control the number of columns
 
-        positions = [i for i in range(len(target[i]))]
-        logo.ax.set_aspect('auto')
+    # Calculate the number of rows needed to display all logos in a grid
+    num_rows = (num_logos + num_cols - 1) // num_cols
 
-        logo.ax.set_xticklabels([target[i]])
-        logo.ax.set_xticks([1])
-        name = os.path.join("temp_seq_logos", str(i + 1) + ".png")
-        plt.savefig(name)
+    # Set the figure size based on the number of rows and columns
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(5 * num_cols, 5 * num_rows),
+                             gridspec_kw={'width_ratios': [1] * num_cols})
 
+    # Flatten the axes to handle both single row and multiple row cases
+    axes_flat = axes.flat if isinstance(axes, np.ndarray) else [axes]
 
+    # Draw each sequence logo on its respective subplot
+    for i, (df, ax) in enumerate(zip(df_list, axes_flat)):
+        logo = logomaker.Logo(df[0], ax=ax, color_scheme='NajafabadiEtAl2017', shade_below=0.5)
+        logo.ax.set_ylabel('Frequency')
+        positions = [i for i in range(len(df[1]))]
+        logo.ax.set_xticklabels(df[1])
+        logo.ax.set_xticks(positions)
+
+        ax.set_title(f'Residues Indexes: {"-".join(map(str, df[1]))}')
+
+    # Hide any unused subplots if there are fewer logos than the number of axes
+    for ax in axes_flat[num_logos:]:
+        ax.axis('off')
+
+    # Adjust the spacing between subplots
+    plt.subplots_adjust(wspace=0.5, hspace=0.5)  # Modify wspace and hspace as needed
+
+    # Show the plot with all sequence logos
+    plt.show()
 def plot_sequence_logo(df, filename=None):
     # Calculate the height of each letter for each position
     stacked_df = df.apply(lambda row: pd.Series(row.sort_values(ascending=False).values), axis=1)
@@ -334,22 +364,25 @@ def plot(files, target_chain, binder, is_ligand,to_show):
     list_of_paths = glob.glob(files + "/*.pdb")
     if is_ligand:
         target_chain_cordinates = helper_functions.extract_info_ligand(list_of_paths[0], target_chain)
+        distance = 10
     else:
         target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
+        distance = 7
     data_frame_target = pd.DataFrame(target_chain_cordinates)
     binder_chain_cordinates = []
     for file in list_of_paths:
-        binder_chain_cordinates += helper_functions.extract_info_pdb(file,binder)
+        binder_chain_cordinates += helper_functions.extract_info_pdb(file, binder)
+
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
 
     if to_show == "all":
-        nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7)
+        nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7,is_ligand)
     else:
         to_show_df =data_frame_target.loc[data_frame_target['residue_index'].isin(to_show)]
-        nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7)
-    create_3d_graph(nearest_neighbors_df,data_frame_target)
+        nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7,is_ligand)
+    create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
     return data_frame_target,data_frame_binders
-def sequence_logos(data_frame_target,data_frame_binder,sequence_logo_residues):
+def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand):
 
     warnings.filterwarnings("ignore")
     model = logomaker.get_example_matrix('ww_information_matrix',
@@ -358,40 +391,25 @@ def sequence_logos(data_frame_target,data_frame_binder,sequence_logo_residues):
     rows_bits= []
     residues = []
     plots = []
-    for i,residue in enumerate(sequence_logo_residues):
-        current_df = data_frame_target.loc[data_frame_target['residue_index'] == residue ]
-        near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7)
+
+
+    for i,target in enumerate(sequence_logo_targets):
+        if is_ligand:
+            current_df = data_frame_target.loc[data_frame_target['atom_name'] == target]
+        else:
+            current_df = data_frame_target.loc[data_frame_target['residue_index'] == target ]
+        near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7, is_ligand)
         if near_neighbor_current.empty:
             continue
-        residues.append(residue)
+        residues.append(target)
         AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
         bits = calculate_bits(list_of_AA, AA_sq)
         rows_bits.append(bits)
         df = pd.DataFrame(columns=model.columns)
         df = pd.concat([df, pd.DataFrame([bits], columns=df.columns)], ignore_index=True)
-        plots.append(create_sequence_logo(df, [residue]))
-    fig = plotly.subplots.make_subplots(rows=1, cols=len(residues))
-    df = pd.DataFrame(columns=model.columns)
-    df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
-    plots.append(create_sequence_logo(df, residues))
-
-    for i,plot in enumerate(plots):
-        fig.add_trace(plot, row=1, col=i+1)
-
-    for i in range(2, len(residues)+1):
-        arrow_x, arrow_tail_x = calculate_arrow_position(i)
-        fig.add_annotation(
-            xref='paper', yref='paper',
-            x=arrow_x, y=-0.15,
-            ax=arrow_tail_x, ay=-0.15,
-            showarrow=True,
-            arrowhead=2,
-            arrowsize=1,
-            arrowwidth=2,
-            arrowcolor='black',
-            standoff=5,
-            text=f'Subplot {i}',
-            font=dict(size=12, color='black'),
-            align='center'
-        )
-    fig.show()
+        plots.append([df, [target]])
+    if  not len(residues) == 1:
+        df = pd.DataFrame(columns=model.columns)
+        df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
+        plots.append([df, residues])
+    create_sequence_logo_list(plots)

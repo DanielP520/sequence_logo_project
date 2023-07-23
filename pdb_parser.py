@@ -75,8 +75,9 @@ class Residue:
         bnorm = numpy.linalg.norm(plane2_norm)
         return math.degrees(math.acos(ab / (anorm * bnorm)))
 class PDBLineParser():
-    atom_name: None
+
     def __init__(self, line:str = None):
+        self.atom_name: None
         self.element_symbol = None
         self.segment_identifier = None
         self.temp = None
@@ -96,21 +97,39 @@ class PDBLineParser():
             self.line = line
             self.parse_line()
     def parse_line(self):
-        self.atom_type = self.line[0:4].replace("\n","").replace(" ","")
-        self.atom_serial_number = int(self.line[6:11].replace("\n","").replace(" ",""))
-        self.atom_name = self.line[12:16].replace("\n","").replace(" ","")
-        self.alternate_location = self.line[16].replace("\n","").replace(" ","")
-        self.residue_name = self.line[17:20].replace("\n","").replace(" ","")
-        self.chain_identifier = self.line[21].replace("\n","").replace(" ","")
-        self.residue_sequence_number = int(self.line[22:26].replace("\n","").replace(" ",""))
-        self.code_for_insertions = self.line[26].replace("\n","").replace(" ","")
-        self.x_cord = float(self.line[30:38].replace("\n","").replace(" ",""))
-        self.y_cord = float(self.line[38:46].replace("\n","").replace(" ",""))
-        self.z_cord = float(self.line[46:54].replace("\n","").replace(" ",""))
-        self.occupany = self.line[54:60].replace("\n","").replace(" ","")
-        self.temp = float(self.line[60:66].replace("\n","").replace(" ",""))
-        self.segment_identifier = self.line[72:76].replace("\n","").replace(" ","")
-        self.element_symbol = self.line[76:78].replace("\n","").replace(" ","")
+
+        if self.line[0:4].replace("\n","").replace(" ","") in "HETATM":
+            self.atom_type = self.line[0:6].replace("\n", "").replace(" ", "")
+            self.atom_serial_number = int(self.line[6:11].replace("\n","").replace(" ",""))
+            self.atom_name = self.line[12:16].replace("\n","").replace(" ","")
+            self.alternate_location = self.line[16].replace("\n","").replace(" ","")
+            self.residue_name = self.line[17:20].replace("\n","").replace(" ","")
+            self.chain_identifier = self.line[21].replace("\n","").replace(" ","")
+            self.residue_sequence_number = int(self.line[22:26].replace("\n","").replace(" ",""))
+            self.code_for_insertions = self.line[26].replace("\n","").replace(" ","")
+            self.x_cord = float(self.line[30:38].replace("\n","").replace(" ",""))
+            self.y_cord = float(self.line[38:46].replace("\n","").replace(" ",""))
+            self.z_cord = float(self.line[46:54].replace("\n","").replace(" ",""))
+            self.occupany = self.line[54:60].replace("\n","").replace(" ","")
+            self.temp = float(self.line[60:66].replace("\n","").replace(" ",""))
+            self.segment_identifier = self.line[72:76].replace("\n","").replace(" ","")
+            self.element_symbol = self.line[76:78].replace("\n","").replace(" ","")
+        else:
+            self.atom_type = self.line[0:4].replace("\n","").replace(" ","")
+            self.atom_serial_number = int(self.line[6:11].replace("\n","").replace(" ",""))
+            self.atom_name = self.line[12:16].replace("\n","").replace(" ","")
+            self.alternate_location = self.line[16].replace("\n","").replace(" ","")
+            self.residue_name = self.line[17:20].replace("\n","").replace(" ","")
+            self.chain_identifier = self.line[21].replace("\n","").replace(" ","")
+            self.residue_sequence_number = int(self.line[22:26].replace("\n","").replace(" ",""))
+            self.code_for_insertions = self.line[26].replace("\n","").replace(" ","")
+            self.x_cord = float(self.line[30:38].replace("\n","").replace(" ",""))
+            self.y_cord = float(self.line[38:46].replace("\n","").replace(" ",""))
+            self.z_cord = float(self.line[46:54].replace("\n","").replace(" ",""))
+            self.occupany = self.line[54:60].replace("\n","").replace(" ","")
+            self.temp = float(self.line[60:66].replace("\n","").replace(" ",""))
+            self.segment_identifier = self.line[72:76].replace("\n","").replace(" ","")
+            self.element_symbol = self.line[76:78].replace("\n","").replace(" ","")
 class ResidueBuilder():
     allowed_3 = ["ALA","ARG","ASN","ASP","CYS","GLU","GLN","GLY","HIS","ILE","LEU","LYS","MET","PHE","PRO","SER","THR","TRP","TYR","VAL"]
     residues = []
