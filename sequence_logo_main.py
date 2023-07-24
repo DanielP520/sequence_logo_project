@@ -334,6 +334,7 @@ def create_sequence_logo_list(df_list):
 
     # Show the plot with all sequence logos
     plt.show()
+    plt.download("")
 def plot_sequence_logo(df, filename=None):
     # Calculate the height of each letter for each position
     stacked_df = df.apply(lambda row: pd.Series(row.sort_values(ascending=False).values), axis=1)
@@ -412,3 +413,8 @@ def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, 
         df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
         plots.append([df, residues])
     create_sequence_logo_list(plots)
+    plt.savefig("sequencelogo.png")
+    
+    # Download the image file using the 'files' module in Colab
+    from google.colab import files
+    files.download("sequencelogo.png)
