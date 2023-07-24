@@ -300,7 +300,7 @@ def create_sequence_logo(df, target):
     logo.ax.set_title(f'Residues Indexes: {"-".join(map(str,target))} ')
     return logo
 
-def create_sequence_logo_list(df_list,download):
+def create_sequence_logo_list(df_list):
     # Calculate the number of columns based on the number of logos
     num_logos = len(df_list)
     num_cols = min(num_logos, 3)  # Change this value to control the number of columns
@@ -333,10 +333,6 @@ def create_sequence_logo_list(df_list,download):
     plt.subplots_adjust(wspace=0.5, hspace=0.5)  # Modify wspace and hspace as needed
     
     plt.show()
-    if download:
-        plt.savefig("logo.png", format="png")
-        from google.colab import files
-        files.download("logo.png", )
 def plot_sequence_logo(df, filename=None):
     # Calculate the height of each letter for each position
     stacked_df = df.apply(lambda row: pd.Series(row.sort_values(ascending=False).values), axis=1)
@@ -384,7 +380,7 @@ def plot(list_of_paths, target_chain, binder, is_ligand,to_show):
         nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7,is_ligand)
     create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
     return data_frame_target,data_frame_binders
-def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand, download):
+def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand):
 
     warnings.filterwarnings("ignore")
     model = logomaker.get_example_matrix('ww_information_matrix',
@@ -414,5 +410,5 @@ def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, 
         df = pd.DataFrame(columns=model.columns)
         df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
         plots.append([df, residues])
-    create_sequence_logo_list(plots,download)
+    create_sequence_logo_list(plots)
     
