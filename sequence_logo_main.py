@@ -5,7 +5,7 @@ Created on Tue Jul  4 17:18:58 2023
 @author: camlo
 """
 import os.path
-
+from google.colab import files
 import plotly.subplots
 from plotly.offline import init_notebook_mode, iplot
 import matplotlib.pyplot as plt
@@ -334,9 +334,9 @@ def create_sequence_logo_list(df_list,download):
     
     plt.show()
     if download:
-        plt.savefig("logo.png")
+        plt.savefig("logo.pdf")
         from google.colab import files
-        files.download("logo.png")
+        files.download("logo.pdf")
 def plot_sequence_logo(df, filename=None):
     # Calculate the height of each letter for each position
     stacked_df = df.apply(lambda row: pd.Series(row.sort_values(ascending=False).values), axis=1)
