@@ -360,8 +360,7 @@ def plot_sequence_logo(df, filename=None):
         plt.show()
 
 
-def plot(files, target_chain, binder, is_ligand,to_show):
-    list_of_paths = glob.glob(files + "/*.pdb")
+def plot(list_of_paths, target_chain, binder, is_ligand,to_show):
     if is_ligand:
         target_chain_cordinates = helper_functions.extract_info_ligand(list_of_paths[0], target_chain)
         distance = 10
