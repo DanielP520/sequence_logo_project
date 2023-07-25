@@ -380,7 +380,8 @@ def plot(list_of_paths, target_chain, binder, is_ligand,to_show):
         nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7,is_ligand)
     create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
     return data_frame_target,data_frame_binders
-def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand):
+    
+def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand, only_combined_logo):
 
     warnings.filterwarnings("ignore")
     model = logomaker.get_example_matrix('ww_information_matrix',
@@ -406,9 +407,16 @@ def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, 
         df = pd.DataFrame(columns=model.columns)
         df = pd.concat([df, pd.DataFrame([bits], columns=df.columns)], ignore_index=True)
         plots.append([df, [target]])
-    if  not len(residues) == 1:
+    if not len(residues) == 1:
         df = pd.DataFrame(columns=model.columns)
         df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
         plots.append([df, residues])
+    if  only_combined_logo:
+        df = pd.DataFrame(columns=model.columns)
+        df = pd.concat([df, pd.DataFrame(rows_bits, columns=df.columns)], ignore_index=True)
+        plots = [[df, residues]]
     create_sequence_logo_list(plots)
+    
+
+
     
