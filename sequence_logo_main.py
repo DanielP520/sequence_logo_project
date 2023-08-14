@@ -5,7 +5,6 @@ Created on Tue Jul  4 17:18:58 2023
 @author: camlo
 """
 import os.path
-from google.colab import files
 import plotly.subplots
 from plotly.offline import init_notebook_mode, iplot
 import matplotlib.pyplot as plt
@@ -33,7 +32,7 @@ def create_3d_graph(df1, df2,is_ligand):
     if is_ligand:
         names = df2['atom_name'].values.tolist()
         color_df2=  df2["color"].values.tolist()
-        size2 = 8
+        size2 = 15
 
     else:
         names = df2['residue_index'].values.tolist()
@@ -210,26 +209,6 @@ def calculate_arrow_position(subplot_index):
     return arrow_x, arrow_tail_x
 
 
-def cluster_3d_positions(df, num_clusters):
-    # Extract the 3D positions from the DataFrame
-    positions = df[['X', 'Y', 'Z']].values
-
-    # Perform K-means clustering
-    kmeans = KMeans(n_clusters=num_clusters)
-    kmeans.fit(positions)
-
-    # Get the cluster labels
-    cluster_labels = kmeans.labels_
-
-    # Create a list of DataFrames for each cluster
-    clusters = []
-    for cluster_id in range(num_clusters):
-        cluster_df = df[cluster_labels == cluster_id]
-        clusters.append(cluster_df)
-
-    # Return the list of DataFrames
-    return clusters
-
 
 def transform_to_1_letter_code(amino_acids_3_letter):
     # Mapping dictionary for 3-letter to 1-letter code
@@ -359,13 +338,11 @@ def plot_sequence_logo(df, filename=None):
         plt.show()
 
 
-def plot(list_of_paths, target_chain, binder, is_ligand,to_show):
+def plot(list_of_paths, target_chain, binder, is_ligand,to_show, distance):
     if is_ligand:
         target_chain_cordinates = helper_functions.extract_info_ligand(list_of_paths[0], target_chain)
-        distance = 10
     else:
         target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
-        distance = 7
     data_frame_target = pd.DataFrame(target_chain_cordinates)
     binder_chain_cordinates = []
     for file in list_of_paths:
@@ -374,14 +351,14 @@ def plot(list_of_paths, target_chain, binder, is_ligand,to_show):
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
 
     if to_show == "all":
-        nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, 7,is_ligand)
+        nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, distance,is_ligand)
     else:
         to_show_df =data_frame_target.loc[data_frame_target['residue_index'].isin(to_show)]
-        nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, 7,is_ligand)
+        nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, distance,is_ligand)
     create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
     return data_frame_target,data_frame_binders
     
-def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand, only_combined_logo):
+def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand, only_combined_logo, distance):
 
     warnings.filterwarnings("ignore")
     model = logomaker.get_example_matrix('ww_information_matrix',
@@ -400,8 +377,8 @@ def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, 
         near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7, is_ligand)
         if near_neighbor_current.empty:
             continue
-        residues.append(target)
         AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
+        residues.append(f' {target}, n = {len(AA_sq)} ')
         bits = calculate_bits(list_of_AA, AA_sq)
         rows_bits.append(bits)
         df = pd.DataFrame(columns=model.columns)

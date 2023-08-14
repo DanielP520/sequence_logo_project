@@ -76,12 +76,7 @@ def extract_info_pdb(pdb_file, chain_id) -> list:
 
 def extract_info_ligand (pdb_file, chain_id) -> list:
     all_atoms = []
-    color = {
-        'O': '#FF0000',  # Oxygen - Red
-        'N': '#0000FF',  # Nitrogen - Blue
-        'C': '#808080',  # Carbon - Grey
-        'S': '#FFFF00',  # Sulfur - Yellow
-    }
+
     with open(pdb_file, "r") as file:
         found_chain =  False
         for line in file:
@@ -98,13 +93,23 @@ def extract_info_ligand (pdb_file, chain_id) -> list:
                     dict_of_atoms['chain'] = parsed_line.chain_identifier
                     dict_of_atoms['atom_name'] = parsed_line.atom_name
                     dict_of_atoms['file'] = pdb_file
-                    dict_of_atoms['color'] = color[parsed_line.atom_name[0]]
+                    dict_of_atoms['color'] = get_color_code(parsed_line.atom_name[0])
                     all_atoms.append(dict_of_atoms)
                     found_chain =True
 
 
     return all_atoms
 
+
+def get_color_code(atom_name):
+    color = {
+        'O': '#FF0000',  # Oxygen - Red
+        'N': '#0000FF',  # Nitrogen - Blue
+        'C': '#808080',  # Carbon - Grey
+        'S': '#FFFF00',  # Sulfur - Yellow
+        'P': '#FFA500'   # Phosphorus - Orange 
+       }
+    return color.get(atom_name, "#000000") 
 def plot_3d_scatter_matplotlib(df):
     # Create a new figure and a 3D axis
     points_data = df[['X',"Y","Z"]].values.tolist()
