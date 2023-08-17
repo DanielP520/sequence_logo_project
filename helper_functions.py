@@ -96,8 +96,6 @@ def extract_info_ligand (pdb_file, chain_id) -> list:
                     dict_of_atoms['color'] = get_color_code(parsed_line.atom_name[0])
                     all_atoms.append(dict_of_atoms)
                     found_chain =True
-
-
     return all_atoms
 
 
