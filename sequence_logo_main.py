@@ -19,6 +19,9 @@ import numpy as np
 import helper_functions
 import warnings
 from matplotlib.patches import FancyArrowPatch
+import plotly.offline as pyo
+pyo.init_notebook_mode(connected=False)
+
 def create_3d_graph(df1, df2,is_ligand):
     # Get XYZ positions from the DataFrame columns
     x1, y1, z1 = df1['X'], df1['Y'], df1['Z']
@@ -97,7 +100,7 @@ def create_3d_graph(df1, df2,is_ligand):
     fig = go.Figure(data=[scatter_trace1, scatter_trace2], layout=layout)
     fig.update_layout(updatemenus=updatemenus)
     # Show the interactive plot
-    iplot(fig)
+    pyo.iplot(fig)
 
 
 def create_3d_graph_list(df, df_list, sequence_info):
@@ -168,8 +171,8 @@ def create_3d_graph_list(df, df_list, sequence_info):
 
     # Show the interactive plot
     fig.show(renderer='browser')
-
-
+    pyo.iplot(fig)
+    
 def find_nearest_points(target, binders, radius, is_ligand
                         ):
     # Convert XYZ positions of target DataFrame to a list of tuples
