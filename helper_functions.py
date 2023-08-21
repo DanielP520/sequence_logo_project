@@ -151,8 +151,10 @@ def extract_connections(pdb_file : str) -> list:
         for line in file:
             if "CONECT" in line:
                 positions = []
-                line_list = line.split(" ")
-                line_list = list(set(line_list))
+                if len(line.split("  ")) != 1:
+                  line_list = line.split("  ")
+                else:
+                  line_list = line.split(" ")
                 for i in range(len(line_list)):
                     if i == 0 or i == 1:
                         continue
@@ -161,7 +163,6 @@ def extract_connections(pdb_file : str) -> list:
                     else:
                         positions.append(line_list[i])
                 dict_of_atoms[line_list[1]] = positions
-    print(dict_of_atoms)
     return dict_of_atoms
 def extract_info_ligand (pdb_file, chain_id) -> list:
     all_atoms = []
