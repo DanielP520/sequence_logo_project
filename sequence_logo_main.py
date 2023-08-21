@@ -294,8 +294,7 @@ def plot(list_of_paths, target_chain, binder, is_ligand,to_show, distance):
     data_frame_target = pd.DataFrame(target_chain_cordinates)
     binder_chain_cordinates = []
     
-
-     for file in list_of_paths:        
+    for file in list_of_paths:        
         binder_chain_cordinates += helper_functions.extract_info_pdb(file, binder)
 
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
