@@ -19,31 +19,23 @@ import numpy as np
 import helper_functions
 import warnings
 from matplotlib.patches import FancyArrowPatch
-import plotly.offline as pyo
-pyo.init_notebook_mode(connected=False)
-
-def create_3d_graph(df1, df2,is_ligand):
+import multiprocess 
+def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
     # Get XYZ positions from the DataFrame columns
     x1, y1, z1 = df1['X'], df1['Y'], df1['Z']
     x2, y2, z2 = df2['X'], df2['Y'], df2['Z']
-
-
-
-
     color_shapely = df1['shapely'].values.tolist()
     color_polar = df1['polar'].values.tolist()
     if is_ligand:
         names = df2['atom_name'].values.tolist()
         color_df2=  df2["color"].values.tolist()
         size2 = 15
-
     else:
         names = df2['residue_index'].values.tolist()
         color_df2 = "black"
         size2 = 15
     init_notebook_mode(connected=True)
 
-    # Create traces for the scatter plots
     scatter_trace1 = go.Scatter3d(
         x=x1,
         y=y1,
@@ -55,7 +47,7 @@ def create_3d_graph(df1, df2,is_ligand):
             opacity=0,
             line=dict(color='black', width=2)
         ),
-        text=df1['AA'],  # Use 'Name' column as annotations
+        text=df1['AA'],  
         hoverinfo='text',
         hoverlabel = dict(bgcolor='yellow', bordercolor='black')
     )
@@ -93,86 +85,36 @@ def create_3d_graph(df1, df2,is_ligand):
                 eye=dict(x=2, y=-2, z=1.5)  # Adjust the eye position to view all eight regions
             )
         ),
-        title='Interactive 3D Scatter Plot'
+        title='MAGPIE'
     )
+    
+    
+    bonds_made = []
+    graphs = [scatter_trace1, scatter_trace2]
+    for bond in ligand_bonds:
+        for pair in ligand_bonds[bond]:
+            comb = [str(bond), str(pair)]
+            if comb not in bonds_made or comb not in bonds_made:
+                bonds_made.append(comb)
+                atom_coords = df2[df2['atom_serial_number'].isin(comb)]
+                point1 = atom_coords[['X', 'Y', 'Z']].values[0]
+                point2 = atom_coords[['X', 'Y', 'Z']].values[1]
+                line_trace = go.Scatter3d(
+                    x=[point1[0], point2[0]],
+                    y=[point1[1], point2[1]],
+                    z=[point1[2], point2[2]],
+                    mode='lines',
+                    line=dict(color='black', width=8)
+                )
+                graphs.append(line_trace)
 
     # Create the figure and add the traces
-    fig = go.Figure(data=[scatter_trace1, scatter_trace2], layout=layout)
+    fig = go.Figure(data=graphs, layout=layout)
     fig.update_layout(updatemenus=updatemenus)
     # Show the interactive plot
-    pyo.iplot(fig)
+    iplot(fig)
 
 
-def create_3d_graph_list(df, df_list, sequence_info):
-    # Create a list to store the scatter traces
-    scatter_traces = []
-
-    x, y, z = df['X'], df['Y'], df['Z']
-    scatter_trace = go.Scatter3d(
-        x=x,
-        y=y,
-        z=z,
-        mode='markers',
-        marker=dict(
-            size=15,
-            color=1,
-            opacity=0.5
-        ),
-        hoverinfo='text',
-        hovertext=f'TARGET',
-
-    )
-    scatter_traces.append(scatter_trace)
-
-    for i, df in enumerate(df_list):
-
-        x, y, z = df['X'], df['Y'], df['Z']
-        target_postions = list(map(str, list(set(list(df['target_residues'].values)))))
-        target_str = " ".join(target_postions)
-        seq_info_per_df = {col: value for col, value in sequence_info[i].iloc[0].items() if value != 0}
-        seq_str = ""
-        for col, value in seq_info_per_df.items():
-            seq_str += (f"{col}: {value}" + '<br>')
-
-        scatter_trace = go.Scatter3d(
-            x=x,
-            y=y,
-            z=z,
-            mode='markers',
-            marker=dict(
-                size=10,
-                color=i + 2,
-                opacity=0
-            ),
-            hoverinfo='text',
-            hovertext=f'Target Residues : {target_str}, & Index: {i + 1} <br> {seq_str}',
-            name=f'Index: {i + 1}'
-        )
-
-        # Add the scatter trace to the list
-        scatter_traces.append(scatter_trace)
-
-    # Create the layout
-    layout = go.Layout(
-        scene=dict(
-            xaxis=dict(title='X'),
-            yaxis=dict(title='Y'),
-            zaxis=dict(title='Z'),
-            camera=dict(
-                eye=dict(x=2, y=-2, z=1.5)  # Adjust the eye position to view all eight regions
-            )
-        ),
-        title='Interactive 3D Scatter Plot',
-        showlegend=False
-    )
-
-    # Create the figure and add the traces
-    fig = go.Figure(data=scatter_traces, layout=layout)
-
-    # Show the interactive plot
-    fig.show(renderer='browser')
-    pyo.iplot(fig)
-    
 def find_nearest_points(target, binders, radius, is_ligand
                         ):
     # Convert XYZ positions of target DataFrame to a list of tuples
@@ -342,23 +284,35 @@ def plot_sequence_logo(df, filename=None):
 
 
 def plot(list_of_paths, target_chain, binder, is_ligand,to_show, distance):
+    
     if is_ligand:
         target_chain_cordinates = helper_functions.extract_info_ligand(list_of_paths[0], target_chain)
+        ligand_bonds = helper_functions.extract_connections(list_of_paths[0])
     else:
         target_chain_cordinates = helper_functions.extract_info_pdb(list_of_paths[0], target_chain)
+    
     data_frame_target = pd.DataFrame(target_chain_cordinates)
     binder_chain_cordinates = []
-    for file in list_of_paths:
+    
+
+     for file in list_of_paths:        
         binder_chain_cordinates += helper_functions.extract_info_pdb(file, binder)
 
     data_frame_binders = pd.DataFrame(binder_chain_cordinates)
-
     if to_show == "all":
         nearest_neighbors_df = find_nearest_points(data_frame_target, data_frame_binders, distance,is_ligand)
     else:
-        to_show_df =data_frame_target.loc[data_frame_target['residue_index'].isin(to_show)]
+        if is_ligand:
+            to_show_df =data_frame_target[data_frame_target['atom_name'].isin(to_show)]
+        else:
+            to_show_df =data_frame_target.loc[data_frame_target['residue_index'].isin(to_show)]
         nearest_neighbors_df = find_nearest_points(to_show_df, data_frame_binders, distance,is_ligand)
-    create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
+        
+    if is_ligand:   
+        create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand, ligand_bonds)
+    else:
+        create_3d_graph(nearest_neighbors_df,data_frame_target, is_ligand)
+    
     return data_frame_target,data_frame_binders
     
 def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, is_ligand, only_combined_logo, distance):
@@ -377,7 +331,7 @@ def sequence_logos(data_frame_target, data_frame_binder, sequence_logo_targets, 
             current_df = data_frame_target.loc[data_frame_target['atom_name'] == target]
         else:
             current_df = data_frame_target.loc[data_frame_target['residue_index'] == target ]
-        near_neighbor_current = find_nearest_points(current_df,data_frame_binder,7, is_ligand)
+        near_neighbor_current = find_nearest_points(current_df,data_frame_binder,distance, is_ligand)
         if near_neighbor_current.empty:
             continue
         AA_sq = transform_to_1_letter_code(near_neighbor_current['AA'].values.tolist())
