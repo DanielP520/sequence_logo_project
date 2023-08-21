@@ -161,6 +161,7 @@ def extract_connections(pdb_file : str) -> list:
                     else:
                         positions.append(line_list[i])
                 dict_of_atoms[line_list[1]] = positions
+    print(dict_of_atoms)
     return dict_of_atoms
 def extract_info_ligand (pdb_file, chain_id) -> list:
     all_atoms = []
