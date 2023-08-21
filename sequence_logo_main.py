@@ -44,7 +44,7 @@ def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
         marker=dict(
             size=9,
             color=color_shapely,
-            opacity=0.8,
+            opacity=0.1,
             line=dict(color='black', width=2)
         ),
         text=df1['AA'],  
@@ -60,7 +60,7 @@ def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
         marker=dict(
             size=size2,
             color=color_df2,
-            opacity=0.8,
+            opacity=0.1,
             line=dict(color='white', width=5)
         ),
         text = names,
