@@ -96,6 +96,8 @@ def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
                 bonds_made.append(comb)
                 atom_coords = df2[df2['atom_serial_number'].isin(comb)]
                 if len(atom_coords) >= 2:
+                    print(comb)
+                    print(atom_coords)
                     point1 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[0], ['X', 'Y', 'Z']].values[0]
                     point2 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[1], ['X', 'Y', 'Z']].values[0]
                     line_trace = go.Scatter3d(
