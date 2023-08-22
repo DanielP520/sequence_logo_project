@@ -92,7 +92,7 @@ def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
     for bond in ligand_bonds:
         for pair in ligand_bonds[bond]:
             comb = [str(bond), str(pair)]
-            if comb not in bonds_made or comb not in bonds_made:
+            if [str(bond), str(pair)] not in bonds_made or [ str(pair),str(bond)] not in bonds_made:
                 bonds_made.append(comb)
                 atom_coords = df2[df2['atom_serial_number'].isin(comb)]
                 if len(atom_coords) >= 2:
