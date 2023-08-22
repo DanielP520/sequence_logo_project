@@ -95,16 +95,17 @@ def create_3d_graph(df1, df2,is_ligand, ligand_bonds = {}):
             if comb not in bonds_made or comb not in bonds_made:
                 bonds_made.append(comb)
                 atom_coords = df2[df2['atom_serial_number'].isin(comb)]
-                point1 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[0], ['X', 'Y', 'Z']].values[0]
-                point2 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[1], ['X', 'Y', 'Z']].values[0]
-                line_trace = go.Scatter3d(
-                    x=[point1[0], point2[0]],
-                    y=[point1[1], point2[1]],
-                    z=[point1[2], point2[2]],
-                    mode='lines',
-                    line=dict(color='black', width=8)
-                )
-                graphs.append(line_trace)
+                if len(atom_coords) >= 2:
+                    point1 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[0], ['X', 'Y', 'Z']].values[0]
+                    point2 = atom_coords.loc[atom_coords['atom_serial_number'] == comb[1], ['X', 'Y', 'Z']].values[0]
+                    line_trace = go.Scatter3d(
+                        x=[point1[0], point2[0]],
+                        y=[point1[1], point2[1]],
+                        z=[point1[2], point2[2]],
+                        mode='lines',
+                        line=dict(color='black', width=8)
+                    )
+                    graphs.append(line_trace)
 
     # Create the figure and add the traces
     fig = go.Figure(data=graphs, layout=layout)
